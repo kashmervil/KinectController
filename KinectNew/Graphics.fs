@@ -31,6 +31,12 @@ let ifTrackedSet color = postToUI <| fun () -> window.ifTracked.Fill <- new Medi
 
 ifTrackedSet <| Media.Color.FromRgb(200uy, 50uy, 50uy)
 
+let breakConnectionDispose = 
+    window.conectionButton.Unchecked
+    |> Observable.subscribe 
+        (fun _ -> 
+            sendInstructionMessage "No connection with trik. Check IP, Port and restart"
+            )//sender <- null)
 
 let ExtractTrackedSkeletons (ev: SkeletonFrameReadyEventArgs) =     
     use frame = ev.OpenSkeletonFrame()
@@ -57,6 +63,9 @@ let WindowLoaded (sender : obj) (args: EventArgs) =
 let WindowUnloaded (sender : obj) (args: EventArgs) = 
     sensor.Stop()
 
+window.Loaded.AddHandler(new RoutedEventHandler(WindowLoaded))
+window.Show()
+window.Unloaded.AddHandler(new RoutedEventHandler(WindowUnloaded))
 
 
 

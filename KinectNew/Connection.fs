@@ -45,6 +45,13 @@ let sendKick controller value =
         try 
             sender.Write(req, 0, req.Length)
         with e -> ()
+let sendExit controller = 
+    let req = "button 5\n"B
+    if sender <> null then
+        printfn "Exiting TRIK %d..." controller
+        try 
+            sender.Write(req, 0, req.Length)
+        with e -> ()
 
 let setTrikConnection() = 
     port <- window.portBox.Text

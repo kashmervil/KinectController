@@ -5,18 +5,7 @@ open SkeletonProcessing
 open Connection
 open Graphics
 open Microsoft.FSharp.Collections
-                                     
-window.Loaded.AddHandler(new RoutedEventHandler(WindowLoaded))
-window.Show()
-window.Unloaded.AddHandler(new RoutedEventHandler(WindowUnloaded))
-
-let breakConnectionDispose = 
-    window.conectionButton.Unchecked
-    |> Observable.subscribe 
-        (fun _ -> 
-            sendInstructionMessage "No connection with trik. Check IP, Port and restart"
-            sender <- null)
-
+                                    
 [<EntryPoint;STAThread>]
 let main _ =
     
@@ -25,7 +14,10 @@ let main _ =
     
     let skeletonFrame = kinect.SkeletonFrameReady.Select ExtractTrackedSkeletons
     let skeltonsId = skeletonFrame |> Observable.map (Array.map trackingId) |> Observable.DistinctUntilChanged
-
+    
+    use printer = skeltonsId.Subscribe(fun ts -> mvvm.TrackedSkeletons <- ts)
+    use videoDisp = kinect.ColorFrameReady.Subscribe ColorFrameReady
+    
     let activeSkeletons = new Collections.Generic.List<int * IDisposable>(5)
     let safeAddSub a = lock activeSkeletons <| fun () -> activeSkeletons.Add a            
     let safeRemove id = lock activeSkeletons <| fun () -> 
@@ -55,7 +47,7 @@ let main _ =
 
         new Reactive.Disposables.CompositeDisposable(d1, d2)
     
-    let updateSubscriptions (ids : int[]) =
+    let updateSubscriptions (ids: int[]) =
             for id in ids do
                 let i = activeSkeletons.FindIndex(fun (i,_) -> i = id)
                 if i < 0 then
@@ -67,8 +59,8 @@ let main _ =
                 | None -> safeRemove k
 
     use subscriptionManager = skeltonsId.Subscribe updateSubscriptions
-    use printer = skeltonsId.Subscribe(fun ts -> mvvm.TrackedSkeletons <- ts)
-
-    use videoDisp = kinect.ColorFrameReady.Subscribe ColorFrameReady
     let app = new Application()
-    app.Run(window)
+    window.Closing.Add(fun _ -> sendExit 0)
+    app.Run(window) |> ignore
+    System.Console.ReadLine() |> ignore
+    0
