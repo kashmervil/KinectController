@@ -15,14 +15,13 @@ let sensor = try
                  exit 0
                  null
 
+let private pixelData : byte array = Array.zeroCreate 1228800//sensor.ColorStream.FramePixelDataLength  
+let private allSkeletons: Skeleton[] = Array.zeroCreate 6
 
 let window = new MainWindow()
 
 let mvvm = new MVVM();
 window.DataContext <- mvvm
-
-//let mutable mode = (window.modeChooser.SelectedValue :?> GameMode)
-
 
 let postToUI (f: unit -> unit) = window.Dispatcher.InvokeAsync f |> ignore
 
@@ -30,27 +29,18 @@ let sendInstructionMessage message = postToUI <| fun () -> window.instructionMes
 
 let ifTrackedSet color = postToUI <| fun () -> window.ifTracked.Fill <- new Media.SolidColorBrush(Color = color)
 
-
-
 ifTrackedSet <| Media.Color.FromRgb(200uy, 50uy, 50uy)
 
-let private allSkeletons: Skeleton[] = Array.zeroCreate 6
 
 let ExtractTrackedSkeletons (ev: SkeletonFrameReadyEventArgs) =     
     use frame = ev.OpenSkeletonFrame()
     if frame = null then 
         failwith "frame is null"
     else 
-        
         frame.CopySkeletonDataTo(allSkeletons)
         let trackedSkeletons = 
             allSkeletons |> Array.choose (fun x -> if isSkeletonTracked x then Some x else None)
         trackedSkeletons |> Array.sortBy (fun x -> x.TrackingId)
-        
-         
-
-let pixelData : byte array = Array.zeroCreate 1228800//sensor.ColorStream.FramePixelDataLength  
-
 
 let ColorFrameReady (args: ColorImageFrameReadyEventArgs) =   
     use frame = args.OpenColorImageFrame()          
@@ -68,6 +58,11 @@ let WindowUnloaded (sender : obj) (args: EventArgs) =
     sensor.Stop()
 
 
+
+
+
+
+//let mutable mode = (window.modeChooser.SelectedValue :?> GameMode)
 (*let mutable handsDispose = FlappyHands
                             //|> fun x -> Observable.SkipUntil(x, tm)
                             |> Observable.subscribe SendRequest                

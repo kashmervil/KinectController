@@ -1,22 +1,14 @@
 ﻿open System
 open System.Windows
 open System.Reactive.Linq
-open WpfApplication1
-open GameMode
 open SkeletonProcessing
 open Connection
 open Graphics
-open Microsoft.Kinect
-open Kinect.Toolbox
 open Microsoft.FSharp.Collections
                                      
-printfn "Press Enter to run the app"
-Console.ReadLine() |> ignore
 window.Loaded.AddHandler(new RoutedEventHandler(WindowLoaded))
 window.Show()
-printfn "LOLOLOL"
 window.Unloaded.AddHandler(new RoutedEventHandler(WindowUnloaded))
-
 
 let breakConnectionDispose = 
     window.conectionButton.Unchecked
@@ -27,13 +19,11 @@ let breakConnectionDispose =
 
 [<EntryPoint;STAThread>]
 let main _ =
+    
     let kinect = tryAccessKinect()
     window.conectionButton.Checked.Subscribe(fun _ -> if setTrikConnection() then startKinectApp kinect) |> ignore
     
     let skeletonFrame = kinect.SkeletonFrameReady.Select ExtractTrackedSkeletons
-    
-    let inline trackingId (x: Skeleton) = x.TrackingId
-
 
     let skeltonsId = skeletonFrame |> Observable.map (Array.map trackingId) |> Observable.DistinctUntilChanged
 
@@ -47,15 +37,15 @@ let main _ =
                            activeSkeletons.RemoveAt(i)
                            d.Dispose()
 
-
     let joinPlayer n = 
         let robot = 0
         let points = skeletonFrame |> Observable.choose (Array.tryFind (fun x -> trackingId x = n))
                       |> Observable.choose getPoints 
         let kick = ref false            
-        let d1 = points |> toFlappingHands |> Observable.subscribe(sendRequest robot (fun () -> safeRemove n) kick)
+        let d1 = points |> toFlappingHands |> Observable.DistinctUntilChanged |>  Observable.subscribe(sendSpeed robot (fun () -> safeRemove n))
         let d2 = points |> Observable.map (fun ((l,r),_) -> 10 > abs (l - r)) |> Observable.DistinctUntilChanged
                  |> Observable.subscribe (fun _ -> (:=) kick true)
+        do AppDomain.CurrentDomain.ProcessExit.Add(fun _ -> sendSpeed robot (fun () -> safeRemove n) (0, 0))
         new Reactive.Disposables.CompositeDisposable(d1, d2)
     
     let updateSubscriptions (ids : int[]) =
