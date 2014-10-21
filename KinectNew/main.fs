@@ -24,10 +24,7 @@ let main _ =
     window.conectionButton.Checked.Subscribe(fun _ -> if setTrikConnection() then startKinectApp kinect) |> ignore
     
     let skeletonFrame = kinect.SkeletonFrameReady.Select ExtractTrackedSkeletons
-
     let skeltonsId = skeletonFrame |> Observable.map (Array.map trackingId) |> Observable.DistinctUntilChanged
-
-    use printer = skeltonsId.Subscribe(fun ts -> mvvm.TrackedSkeletons <- ts)
 
     let activeSkeletons = new Collections.Generic.List<int * IDisposable>(5)
     let safeAddSub a = lock activeSkeletons <| fun () -> activeSkeletons.Add a            
@@ -39,13 +36,23 @@ let main _ =
 
     let joinPlayer n = 
         let robot = 0
-        let points = skeletonFrame |> Observable.choose (Array.tryFind (fun x -> trackingId x = n))
-                      |> Observable.choose getPoints 
-        let kick = ref false            
-        let d1 = points |> toFlappingHands |> Observable.DistinctUntilChanged |>  Observable.subscribe(sendSpeed robot (fun () -> safeRemove n))
-        let d2 = points |> Observable.map (fun ((l,r),_) -> 10 > abs (l - r)) |> Observable.DistinctUntilChanged
-                 |> Observable.subscribe (fun _ -> (:=) kick true)
-        do AppDomain.CurrentDomain.ProcessExit.Add(fun _ -> sendSpeed robot (fun () -> safeRemove n) (0, 0))
+        let points = skeletonFrame 
+                     |> Observable.choose (Array.tryFind (fun x -> trackingId x = n))
+                     |> Observable.choose getPoints
+            
+        let d1 = points 
+                 |> ObservableHelpers.TakeDerivative //  
+                 |> ObservableHelpers.Buffer 10 1    //   Making flapping routine 
+                 |> Observable.map tupleAverage      //
+                 |> Observable.map flappingScale     //
+                 |> Observable.DistinctUntilChanged 
+                 |> Observable.subscribe(sendSpeed robot (fun () -> safeRemove n))
+
+        let d2 = points 
+                 |> Observable.map (fun ((l,r),_) -> 10 > abs (l - r)) 
+                 |> Observable.DistinctUntilChanged
+                 |> Observable.subscribe (sendKick robot)
+
         new Reactive.Disposables.CompositeDisposable(d1, d2)
     
     let updateSubscriptions (ids : int[]) =
@@ -59,7 +66,8 @@ let main _ =
                 | Some _ -> ()
                 | None -> safeRemove k
 
-    use subscriptionManager = skeltonsId.Subscribe(updateSubscriptions)
+    use subscriptionManager = skeltonsId.Subscribe updateSubscriptions
+    use printer = skeltonsId.Subscribe(fun ts -> mvvm.TrackedSkeletons <- ts)
 
     use videoDisp = kinect.ColorFrameReady.Subscribe ColorFrameReady
     let app = new Application()

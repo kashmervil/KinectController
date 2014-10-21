@@ -38,7 +38,7 @@ let sendSpeed controller compensation (l,r) =
         compensation()
         sendInstructionMessage "No connection with trik. Check IP, Port and restart"  
 
-let sendKick controller = 
+let sendKick controller value = 
     let req = "button 1\n"B
     if sender <> null then
         printfn "kick TRIK %d" controller
