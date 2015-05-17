@@ -1,4 +1,5 @@
 ﻿open Trik
+open Trik.Collections
 open System.Threading
 
 let exit = new EventWaitHandle(false, EventResetMode.AutoReset)
@@ -7,9 +8,14 @@ let exit = new EventWaitHandle(false, EventResetMode.AutoReset)
 let main _ = 
     use model = new Model(PadConfigPort = 9999)
 
-    let lWheel = model.Motor.["M1"]
-    let rWheel = model.Motor.["M3"]
-    let pad = model.Pad
+    use lWheel = model.Motors.[M1]
+    use rWheel = model.Motors.[M2]
+    use pad = model.Pad
+    use buttons = model.Buttons
+
+    use downButtonDisposal = buttons.ToObservable()
+                             |> Observable.filter (fun x -> ButtonEventCode.Down = x.Button) 
+                             |> Observable.subscribe (fun _ -> lWheel.Stop(); rWheel.Stop(); exit.Set() |> ignore)
 
     use dbtn = pad.Buttons.Subscribe (fun x ->
         match x with
