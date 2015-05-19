@@ -56,7 +56,6 @@
   <ItemGroup>
     <Compile Include="Program.fs" />
     <None Include="App.config" />
-    <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
@@ -67,8 +66,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
     <Reference Include="Trik.Core">
-      <HintPath>..\packages\trik-sharp.0.5.5\lib\Trik.Core.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\..\trik-sharp\Source\bin\Release\Trik.Core.dll</HintPath>
     </Reference>
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
