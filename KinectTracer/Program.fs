@@ -12,31 +12,30 @@ let main _ =
     use lWheel = model.Motors.[M4]
     use rWheel = model.Motors.[M3]
     use pad = model.Pad
-    use buttons = model.Buttons
+    let buttons = model.Buttons
 
-    use downButtonDisposal = buttons.ToObservable()
-                             |> Observable.filter (fun x -> ButtonEventCode.Down = x.Button) 
+    use powerButtonDisposal = buttons.ToObservable()
+                             |> Observable.filter (fun x -> ButtonEventCode.Power = x.Button) 
                              |> Observable.subscribe (fun _ -> lWheel.Stop(); rWheel.Stop(); exit.Set() |> ignore)
     
-    use timerStopper = Observable.interval(System.TimeSpan.FromSeconds 5.0)
+    use timerStopper = Observable.interval(System.TimeSpan.FromSeconds 2.0)
                        |> Observable.subscribe(fun _ -> lWheel.Stop(); rWheel.Stop())
 
-    use dbtn = pad.Buttons.Subscribe (fun x ->
+    use dbtn = pad.Buttons |> Observable.subscribe (fun x ->
         match x with
         | 5 -> printfn "Exiting..."; exit.Set() |> ignore
         | num -> printfn "%A" num)
 
-    use disp = pad.Pads.Subscribe (fun (_, coord) ->  
+    use disp = pad.Pads |> Observable.subscribe (fun (_, coord) ->  
         match coord with
         | Some(l, r) -> 
-            //printfn "%d %d" l r
             lWheel.SetPower l
             rWheel.SetPower r 
         | _ -> ()
     )
 
     printfn "Ready"
+    buttons.Start()
     exit.WaitOne() |> ignore
-    printfn "Exiting (after wait)"
-    Thread.Sleep 1000
+
     0
